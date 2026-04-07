@@ -8,6 +8,7 @@ import HeatmapCanvas from '@/components/HeatmapCanvas';
 import ScanpathOverlay from '@/components/ScanpathOverlay';
 import ScoreCard from '@/components/ScoreCard';
 import FindingsList from '@/components/FindingsList';
+import AccessGate from '@/components/AccessGate';
 
 type AppState = 'idle' | 'capturing' | 'analysing' | 'complete' | 'error';
 
@@ -20,6 +21,7 @@ const STATUS_MESSAGES: Record<string, string> = {
 };
 
 export default function Home() {
+  const [accessCode, setAccessCode] = useState<string | null>(null);
   const [appState, setAppState] = useState<AppState>('idle');
   const [screenshot, setScreenshot] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<AttentionAnalysis | null>(null);
@@ -39,7 +41,10 @@ export default function Home() {
     try {
       const res = await fetch('/api/analyse', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessCode ? { 'x-access-code': accessCode } : {}),
+        },
         body: JSON.stringify({ screenshot: base64Screenshot }),
         signal: AbortSignal.timeout(60000),
       });
@@ -57,7 +62,7 @@ export default function Home() {
       setErrorMessage(message);
       setAppState('error');
     }
-  }, []);
+  }, [accessCode]);
 
   const handleAnalyseUrl = useCallback(
     async (url: string) => {
@@ -68,7 +73,10 @@ export default function Home() {
       try {
         const res = await fetch('/api/screenshot', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(accessCode ? { 'x-access-code': accessCode } : {}),
+          },
           body: JSON.stringify({ url }),
           signal: AbortSignal.timeout(60000),
         });
@@ -143,6 +151,11 @@ export default function Home() {
       window.removeEventListener('resize', checkCanvas);
     };
   }, [appState, screenshot]);
+
+  // Show access gate if not authenticated
+  if (!accessCode) {
+    return <AccessGate onAuthenticated={setAccessCode} />;
+  }
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white">

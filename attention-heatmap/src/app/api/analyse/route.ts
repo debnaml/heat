@@ -2,12 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { ATTENTION_ANALYSIS_PROMPT } from '@/lib/prompts';
 import { AttentionAnalysis } from '@/lib/types';
+import { validateRequest } from '@/lib/auth';
+
+export const maxDuration = 60; // Vercel function timeout
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
 export async function POST(req: NextRequest) {
+  const authError = validateRequest(req);
+  if (authError) return authError;
+
   const { screenshot } = await req.json();
 
   if (!screenshot) {
